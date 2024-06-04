@@ -1,1 +1,1 @@
-GET localhost:8080/reservation-report
+GET https://logical-fort-425301-p0.uc.r.appspot.com/reservation-report

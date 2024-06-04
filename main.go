@@ -1,13 +1,13 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
 	"log"
 	"net/url"
 	"os"
+	"restaurant-reservation-management/src/database"
 	"restaurant-reservation-management/src/server"
 )
 
@@ -19,14 +19,10 @@ func main() {
 	dbPort := os.Getenv("DB_PORT")
 	dbName := os.Getenv("DB_NAME")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
 		dbUser, url.QueryEscape(dbPassword), dbHost, dbPort, dbName)
 
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
-	}
-	log.Println("Database connected successfully")
+	db := database.NewPsqlStorage(dsn)
 	defer db.Close()
 
 	port := os.Getenv("PORT")
@@ -34,8 +30,8 @@ func main() {
 		port = "8080"
 	}
 
-	s := server.New(fmt.Sprintf(":%s", port), db)
-	if err = s.Serve(); err != nil {
-		log.Fatalf("Failed to start s: %v", err)
+	s := server.New(fmt.Sprintf(":%s", port), db.Conn)
+	if err := s.Serve(); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }

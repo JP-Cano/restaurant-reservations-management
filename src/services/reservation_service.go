@@ -1,8 +1,9 @@
 package services
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v5"
 	"log"
+	"restaurant-reservation-management/src/database"
 	"restaurant-reservation-management/src/models"
 	"restaurant-reservation-management/src/queries"
 )
@@ -12,23 +13,19 @@ type ReservationRepository interface {
 }
 
 type ReservationStorage struct {
-	DB *sql.DB
+	DB *pgx.Conn
 }
 
-func NewReservationService(db *sql.DB) *ReservationStorage {
+func NewReservationService(db *pgx.Conn) *ReservationStorage {
 	return &ReservationStorage{DB: db}
 }
 
 func (s *ReservationStorage) GetReservationReport() ([]models.ReservationReport, error) {
-	rows, err := s.DB.Query(queries.ReservationReportQuery)
+	rows, err := s.DB.Query(database.BCGContext, queries.ReservationReportQuery)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if closeErr := rows.Close(); closeErr != nil {
-			log.Println(closeErr)
-		}
-	}()
+	defer rows.Close()
 
 	reservationsChan := make(chan models.ReservationReport)
 	errorCh := make(chan error)
@@ -38,7 +35,7 @@ func (s *ReservationStorage) GetReservationReport() ([]models.ReservationReport,
 	return s.validateChannels(reservationsChan, errorCh)
 }
 
-func (s *ReservationStorage) processReservations(rows *sql.Rows, reservationsChan chan models.ReservationReport, errorCh chan error) {
+func (s *ReservationStorage) processReservations(rows pgx.Rows, reservationsChan chan models.ReservationReport, errorCh chan error) {
 	defer close(reservationsChan)
 	for rows.Next() {
 		var reservationReport models.ReservationReport
@@ -64,6 +61,7 @@ func (s *ReservationStorage) validateChannels(reservationsChan chan models.Reser
 			reservationReports = append(reservationReports, report)
 		case err := <-errorCh:
 			log.Println(err)
+			close(errorCh)
 			return nil, err
 		}
 	}

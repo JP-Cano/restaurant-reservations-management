@@ -1,7 +1,7 @@
 package server
 
 import (
-	"database/sql"
+	"github.com/jackc/pgx/v5"
 	"log"
 	"net/http"
 	"restaurant-reservation-management/src/controllers"
@@ -11,10 +11,10 @@ import (
 
 type Server struct {
 	Addr string
-	DB   *sql.DB
+	DB   *pgx.Conn
 }
 
-func New(addr string, db *sql.DB) *Server {
+func New(addr string, db *pgx.Conn) *Server {
 	return &Server{
 		Addr: addr,
 		DB:   db,
